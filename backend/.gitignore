@@ -1,0 +1,6 @@
+node_modules/
+.env
+uploads/menu/*
+!uploads/menu/.gitkeep
+uploads/rooms/*
+!uploads/rooms/.gitkeep
