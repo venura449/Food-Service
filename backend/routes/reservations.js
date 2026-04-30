@@ -259,7 +259,11 @@ router.post('/checkout-session', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to create checkout session' });
+    const detail =
+      err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+        ? err.message
+        : 'Unknown Stripe error';
+    return res.status(500).json({ error: `Failed to create checkout session: ${detail}` });
   }
 });
 

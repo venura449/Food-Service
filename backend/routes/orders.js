@@ -58,6 +58,22 @@ router.get('/admin', requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/mine', async (req, res) => {
+  try {
+    const orders = await FoodOrder.find({
+      userId: req.user.id,
+      paymentStatus: { $in: ['paid', 'refunded'] },
+      status: { $ne: 'pending_payment' },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ orders: orders.map(serialize) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to load your orders' });
+  }
+});
+
 router.patch('/admin/:id/status', requireAdmin, async (req, res) => {
   try {
     const status = String(req.body?.status || '').trim().toLowerCase();
@@ -204,7 +220,11 @@ router.post('/user/food/checkout-session', async (req, res) => {
     return res.status(201).json({ order: serialize(order.toObject()), checkoutUrl: session.url, sessionId: session.id });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to create food checkout session' });
+    const detail =
+      err && typeof err === 'object' && 'message' in err && typeof err.message === 'string'
+        ? err.message
+        : 'Unknown Stripe error';
+    return res.status(500).json({ error: `Failed to create food checkout session: ${detail}` });
   }
 });
 
