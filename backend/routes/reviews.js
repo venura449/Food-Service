@@ -111,4 +111,18 @@ router.get('/admin', requireAdmin, async (req, res) => {
   }
 });
 
+router.delete('/admin/:id', requireAdmin, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id).lean();
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    await Review.deleteOne({ _id: req.params.id });
+    return res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to delete review' });
+  }
+});
+
 module.exports = router;

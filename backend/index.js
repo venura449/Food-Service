@@ -17,6 +17,7 @@ const inventoryRoutes = require('./routes/inventory');
 const salesRoutes = require('./routes/sales');
 const reviewRoutes = require('./routes/reviews');
 const notificationRoutes = require('./routes/notifications');
+const advertisementRoutes = require('./routes/advertisements');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ const uploadsRoot = path.join(__dirname, 'uploads');
 fs.mkdirSync(path.join(uploadsRoot, 'menu'), { recursive: true });
 fs.mkdirSync(path.join(uploadsRoot, 'rooms'), { recursive: true });
 fs.mkdirSync(path.join(uploadsRoot, 'profiles'), { recursive: true });
+fs.mkdirSync(path.join(uploadsRoot, 'ads'), { recursive: true });
 app.use('/uploads', express.static(uploadsRoot));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -41,6 +43,7 @@ app.use('/api/inventory', authenticate, inventoryRoutes);
 app.use('/api/sales', authenticate, salesRoutes);
 app.use('/api/reviews', authenticate, reviewRoutes);
 app.use('/api/notifications', authenticate, notificationRoutes);
+app.use('/api/advertisements', authenticate, advertisementRoutes);
 
 async function repairFoodOrderIndexes() {
   const collection = FoodOrder.collection;
