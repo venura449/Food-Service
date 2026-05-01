@@ -2,10 +2,11 @@ const express = require('express');
 const MenuItem = require('../models/MenuItem');
 const { requireAdmin } = require('../middleware/auth');
 const { optionalImageUpload, publicPathForFile, removeImageFile } = require('../lib/menuUpload');
+const { toAbsoluteAssetUrl } = require('../lib/assetUrl');
 
 const router = express.Router();
 
-function serialize(doc) {
+function serialize(doc, req) {
   return {
     id: doc._id.toString(),
     name: doc.name,
@@ -14,7 +15,7 @@ function serialize(doc) {
     category: doc.category,
     isAvailable: doc.isAvailable,
     sortOrder: doc.sortOrder,
-    imagePath: doc.imagePath || '',
+    imagePath: toAbsoluteAssetUrl(req, doc.imagePath || ''),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -45,7 +46,7 @@ router.get('/items', async (req, res) => {
     }
 
     const items = await MenuItem.find(filter).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    return res.json({ items: items.map(serialize) });
+    return res.json({ items: items.map((item) => serialize(item, req)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load menu' });
@@ -67,7 +68,7 @@ router.get('/items/admin', requireAdmin, async (req, res) => {
     }
 
     const items = await MenuItem.find(filter).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    return res.json({ items: items.map(serialize) });
+    return res.json({ items: items.map((item) => serialize(item, req)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load menu' });
@@ -106,7 +107,7 @@ router.post('/items', requireAdmin, optionalImageUpload, async (req, res) => {
       imagePath,
     });
 
-    return res.status(201).json({ item: serialize(item.toObject()) });
+    return res.status(201).json({ item: serialize(item.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to create item' });
@@ -148,7 +149,7 @@ router.patch('/items/:id', requireAdmin, optionalImageUpload, async (req, res) =
     }
 
     await item.save();
-    return res.json({ item: serialize(item.toObject()) });
+    return res.json({ item: serialize(item.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update item' });

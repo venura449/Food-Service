@@ -7,15 +7,16 @@ const {
   publicPathForAdFile,
   removeAdImageFile,
 } = require('../lib/advertisementUpload');
+const { toAbsoluteAssetUrl } = require('../lib/assetUrl');
 
 const router = express.Router();
 
-function serialize(doc) {
+function serialize(doc, req) {
   return {
     id: doc._id.toString(),
     title: doc.title,
     message: doc.message || '',
-    imagePath: doc.imagePath || '',
+    imagePath: toAbsoluteAssetUrl(req, doc.imagePath || ''),
     isActive: !!doc.isActive,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -34,7 +35,7 @@ function boolFromBody(v, defaultVal = true) {
 router.get('/random', async (_req, res) => {
   try {
     const [item] = await Advertisement.aggregate([{ $match: { isActive: true } }, { $sample: { size: 1 } }]);
-    return res.json({ ad: item ? serialize(item) : null });
+    return res.json({ ad: item ? serialize(item, req) : null });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load advertisement' });
@@ -44,7 +45,7 @@ router.get('/random', async (_req, res) => {
 router.get('/admin', requireAdmin, async (_req, res) => {
   try {
     const list = await Advertisement.find({}).sort({ updatedAt: -1, createdAt: -1 }).lean();
-    return res.json({ ads: list.map(serialize) });
+    return res.json({ ads: list.map((item) => serialize(item, req)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load advertisements' });
@@ -65,7 +66,7 @@ router.post('/', requireAdmin, optionalAdImageUpload, async (req, res) => {
       imagePath: req.file?.filename ? publicPathForAdFile(req.file.filename) : '',
     });
 
-    return res.status(201).json({ ad: serialize(ad.toObject()) });
+    return res.status(201).json({ ad: serialize(ad.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to create advertisement' });
@@ -90,7 +91,7 @@ router.patch('/:id', requireAdmin, optionalAdImageUpload, async (req, res) => {
     }
 
     await ad.save();
-    return res.json({ ad: serialize(ad.toObject()) });
+    return res.json({ ad: serialize(ad.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update advertisement' });

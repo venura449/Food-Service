@@ -2,6 +2,7 @@ const express = require('express');
 const Room = require('../models/Room');
 const { requireAdmin } = require('../middleware/auth');
 const { optionalImageUpload, publicPathForFile, removeImageFile } = require('../lib/roomUpload');
+const { toAbsoluteAssetUrl } = require('../lib/assetUrl');
 
 const router = express.Router();
 
@@ -18,12 +19,12 @@ const ALLOWED_FEATURES = new Set([
   'quiet_zone',
 ]);
 
-function serialize(doc) {
+function serialize(doc, req) {
   return {
     id: doc._id.toString(),
     name: doc.name,
     description: doc.description || '',
-    imagePath: doc.imagePath || '',
+    imagePath: toAbsoluteAssetUrl(req, doc.imagePath || ''),
     features: doc.features || [],
     packages: (doc.packages || []).map((p) => ({
       guestCount: p.guestCount,
@@ -141,7 +142,7 @@ router.get('/items', async (req, res) => {
       filter.$or = [{ name: rx }, { description: rx }, { offersNote: rx }];
     }
     const rooms = await Room.find(filter).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    return res.json({ rooms: rooms.map(serialize) });
+    return res.json({ rooms: rooms.map((room) => serialize(room, req)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load rooms' });
@@ -157,7 +158,7 @@ router.get('/items/admin', requireAdmin, async (req, res) => {
       filter.$or = [{ name: rx }, { description: rx }, { offersNote: rx }];
     }
     const rooms = await Room.find(filter).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    return res.json({ rooms: rooms.map(serialize) });
+    return res.json({ rooms: rooms.map((room) => serialize(room, req)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load rooms' });
@@ -198,7 +199,7 @@ router.post('/items', requireAdmin, optionalImageUpload, async (req, res) => {
     if (Number.isFinite(sortOrder)) doc.sortOrder = sortOrder;
 
     const room = await Room.create(doc);
-    return res.status(201).json({ room: serialize(room.toObject()) });
+    return res.status(201).json({ room: serialize(room.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to create room' });
@@ -237,7 +238,7 @@ router.patch('/items/:id', requireAdmin, optionalImageUpload, async (req, res) =
     }
 
     await room.save();
-    return res.json({ room: serialize(room.toObject()) });
+    return res.json({ room: serialize(room.toObject(), req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update room' });

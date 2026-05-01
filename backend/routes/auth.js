@@ -8,6 +8,7 @@ const {
   publicPathForProfile,
   removeProfileImage,
 } = require('../lib/profileUpload');
+const { toAbsoluteAssetUrl } = require('../lib/assetUrl');
 
 const router = express.Router();
 
@@ -21,12 +22,12 @@ function signToken(user) {
   );
 }
 
-function publicUser(user) {
+function publicUser(user, req) {
   return {
     id: user._id.toString(),
     email: user.email,
     name: user.name || '',
-    profileImagePath: user.profileImagePath || '',
+    profileImagePath: toAbsoluteAssetUrl(req, user.profileImagePath || ''),
     role: user.role || 'user',
   };
 }
@@ -62,7 +63,7 @@ router.post('/register', async (req, res) => {
     const token = signToken(user);
     return res.status(201).json({
       token,
-      user: publicUser(user),
+      user: publicUser(user, req),
     });
   } catch (err) {
     console.error(err);
@@ -92,7 +93,7 @@ router.post('/login', async (req, res) => {
     const token = signToken(user);
     return res.json({
       token,
-      user: publicUser(user),
+      user: publicUser(user, req),
     });
   } catch (err) {
     console.error(err);
@@ -104,7 +105,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ user: publicUser(user) });
+    return res.json({ user: publicUser(user, req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to load profile' });
@@ -121,7 +122,7 @@ router.patch('/me', authenticate, optionalProfileUpload, async (req, res) => {
       user.profileImagePath = publicPathForProfile(req.file.filename);
     }
     await user.save();
-    return res.json({ user: publicUser(user) });
+    return res.json({ user: publicUser(user, req) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update profile' });
