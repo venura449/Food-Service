@@ -32,7 +32,7 @@ function boolFromBody(v, defaultVal = true) {
   return defaultVal;
 }
 
-router.get('/random', async (_req, res) => {
+router.get('/random', async (req, res) => {
   try {
     const [item] = await Advertisement.aggregate([{ $match: { isActive: true } }, { $sample: { size: 1 } }]);
     return res.json({ ad: item ? serialize(item, req) : null });
@@ -42,7 +42,7 @@ router.get('/random', async (_req, res) => {
   }
 });
 
-router.get('/admin', requireAdmin, async (_req, res) => {
+router.get('/admin', requireAdmin, async (req, res) => {
   try {
     const list = await Advertisement.find({}).sort({ updatedAt: -1, createdAt: -1 }).lean();
     return res.json({ ads: list.map((item) => serialize(item, req)) });
